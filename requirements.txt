@@ -1,0 +1,9 @@
+langchain
+langgraph
+langchain-openai
+langchain-deepseek
+langchain-ollama
+python-dotenv
+sentence-transformers
+scikit-learn
+numpy
