@@ -4,10 +4,21 @@
 # ==============================================================================
 
 import json
+import re
 from agents.base_agent import BaseAgent
 from utils.prompts import REWARD_JUDGE_PROMPT, CONTRIBUTION_JUDGE_PROMPT
 
+def extract_final_answer(response: str) -> str:
+    """提取 <think> 之后的内容作为最终答案"""
+    # 方法 1: 删除所有 <think> 标签内容
+    clean_response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL)
 
+    # 方法 2: 提取最后一个 </think> 后的内容
+    if "</think>" in response:
+        return response.split("</think>")[-1].strip()
+    clean_response = clean_response.replace("\n","")
+
+    return clean_response.strip()
 class JudgeAgent(BaseAgent):
     def get_prompt(self):
         # Judge has multiple prompts, handled in specific methods
@@ -20,11 +31,13 @@ class JudgeAgent(BaseAgent):
             "final_answer": final_answer,
             "ground_truth": ground_truth
         })
-        print("get_reward_score 8888888888888 -- ",response)
+
+        get_only_text = extract_final_answer(response.content.strip())
+        print("get_reward_score 8888888888888 -- ", get_only_text)
         try:
-            return float(response.content.strip())
+            return float(get_only_text)
         except ValueError:
-            print(f"Warning: Judge failed to produce a valid float for reward. Got: {response.content}")
+            print(f"Warning: Judge failed to produce a valid float for reward. Got: {get_only_text}")
             return 0.0
 
     def get_contribution_scores(self, query: str, final_answer: str, agent_outputs_and_history: str) -> dict:
@@ -35,16 +48,23 @@ class JudgeAgent(BaseAgent):
             "agent_outputs_and_history": agent_outputs_and_history
         })
 
-        print("get_contribution_scores 99999999999999999999 -- ", response)
+
+        get_only_text = extract_final_answer(response.content.strip())
+        print("get_contribution_scores 99999999999999999999 -- ", get_only_text)
         try:
             # Clean the response content to ensure it's a valid JSON string
-            content = response.content.strip()
+            content = get_only_text
             if content.startswith("```json"):
                 content = content[7:]
             if content.endswith("```"):
                 content = content[:-3]
 
             scores = json.loads(content)
+
+            print(scores)
+            print(type(scores))
+            print("12121212112121212")
+
 
             # Normalize scores to ensure they sum to 1.0
             total_score = sum(scores.values())
