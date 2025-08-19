@@ -51,7 +51,10 @@ class JudgeAgent(BaseAgent):
             else:
                 # If all scores are 0, distribute equally
                 num_agents = len(scores)
-                return {agent: 1.0 / num_agents for agent in scores}
+                if num_agents > 0:
+                    return {agent: 1.0 / num_agents for agent in scores}
+                return {}
+
 
         except (json.JSONDecodeError, TypeError) as e:
             print(f"Warning: Judge failed to produce valid JSON for contributions. Error: {e}. Got: {response.content}")

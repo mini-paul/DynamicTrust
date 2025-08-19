@@ -5,7 +5,7 @@
 
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_models import ChatOllama
-from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL
+from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL,OLLAMA_BASE_URL
 
 def get_llm_client(config: dict):
     """
@@ -25,6 +25,7 @@ def get_llm_client(config: dict):
     elif model_type == "ollama":
         return ChatOllama(
             model=model_name,
+            base_url=OLLAMA_BASE_URL,
             temperature=temperature,
         )
     else:

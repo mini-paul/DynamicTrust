@@ -17,12 +17,12 @@ from graphs.crs_graph import (
     update_crs,
     should_continue_collaboration
 )
-from config import JUDGE_MODEL_CONFIG, AGENT_TEAM_CONFIG
+from config import JUDGE_MODEL_CONFIG, AGENT_TEAM_CONFIG, INITIAL_CRS
 
 
 def load_dataset(path="datasets/gsm8k_sample.json"):
     """Loads a sample dataset."""
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
@@ -36,25 +36,23 @@ def build_agent_team():
     for agent_conf in AGENT_TEAM_CONFIG["adversarial_agents"]:
         team[agent_conf["id"]] = AdversarialAgent(agent_conf["id"], agent_conf["config"])
 
-    # Add the judge agent
-    team["judge"] = JudgeAgent("Judge-Agent", JUDGE_MODEL_CONFIG)
-    return team
+    # Create the judge agent separately
+    judge = JudgeAgent("Judge-Agent", JUDGE_MODEL_CONFIG)
+    return team, judge
 
 
 def define_workflow():
     """Defines and compiles the LangGraph workflow."""
     workflow = StateGraph(CrsGraphState)
-
+    workflow.add_node("initialize", initialize_crs)
     # Add nodes
-    workflow.add_node("initialize_scores", initialize_crs)
     workflow.add_node("collaborate", agent_collaboration_step)
     workflow.add_node("aggregate", crs_aware_aggregation)
     workflow.add_node("evaluate", evaluate_and_reward)
     workflow.add_node("update_scores", update_crs)
 
     # Define edges
-    workflow.set_entry_point("initialize_scores")
-    workflow.add_edge("initialize_scores", "collaborate")
+    workflow.set_entry_point("collaborate")
 
     # Conditional edge for collaboration loop (simplified to one iteration)
     workflow.add_conditional_edges(
@@ -76,7 +74,7 @@ def define_workflow():
 def run_experiment():
     """Runs the full experiment over the dataset."""
     print(">>> Building Agent Team...")
-    agent_team = build_agent_team()
+    agent_team, judge_agent = build_agent_team()
 
     print(">>> Defining Workflow...")
     app = define_workflow()
@@ -86,43 +84,45 @@ def run_experiment():
 
     # Initialize the state for the first run
     # The credibility scores will be carried over between queries
-    agent_ids_without_judge = [id for id in agent_team.keys() if id != 'judge']
-    initial_state = {
+    persistent_state = {
         "agent_team": agent_team,
-        "credibility_scores": {agent_id: 0.5 for agent_id in agent_ids_without_judge}
+        "judge_agent": judge_agent,
+        "credibility_scores": {agent_id: INITIAL_CRS for agent_id in agent_team.keys()}
     }
+
+    print(persistent_state)
 
     print("\n" + "=" * 50)
     print(">>> STARTING EXPERIMENT RUN")
     print("=" * 50 + "\n")
+    print(f"Initial CrS: {persistent_state['credibility_scores']}")
 
     for i, item in enumerate(dataset):
         print(f"\n--- Processing Query {i + 1}/{len(dataset)} ---")
         print(f"Query: {item['question']}")
 
-        # Prepare the input for this run
+        # Prepare the input for this run, carrying over the persistent state
         run_input = {
             "query": item["question"],
             "ground_truth": item["answer"],
-            **initial_state  # Pass the current state
+            **persistent_state
         }
 
         # Invoke the graph
-        final_state = None
+        final_run_state = None
         for s in app.stream(run_input):
-            final_state = s
-            # You can add print statements here to see the state at each step if needed
-            # print(s)
+            # The final state is the one just before the END node
+            if END in s:
+                final_run_state = s[END]
 
-        # The final state of this run contains the updated scores
-        # We update the initial_state for the next run
-        if final_state and "update_scores" in final_state:
-            updated_scores = final_state["update_scores"]["credibility_scores"]
-            initial_state["credibility_scores"] = updated_scores
+        # Update the persistent state for the next run
+        if final_run_state:
+            updated_scores = final_run_state["credibility_scores"]
+            persistent_state["credibility_scores"] = updated_scores
             print("\n--- End of Query Round ---")
-            print(f"Final Answer Given: {final_state['update_scores']['final_answer']}")
+            print(f"Final Answer Given: {final_run_state['final_answer']}")
             print(f"Ground Truth: {item['answer']}")
-            print(f"Reward: {final_state['update_scores']['reward']}")
+            print(f"Reward: {final_run_state['reward']}")
             print(f"Updated CrS for next round: { {k: round(v, 3) for k, v in updated_scores.items()} }")
         else:
             print("Error: Graph did not complete successfully.")
