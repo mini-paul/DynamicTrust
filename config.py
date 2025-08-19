@@ -1,62 +1,82 @@
 # config.py
+# ==============================================================================
+# File: config.py
+# Description: 配置文件，用于管理API密钥和模型设置
+# 注意：请在项目根目录下创建一个 .env 文件，并填入您的DeepSeek API Key
+# .env 文件内容示例:
+# DEEPSEEK_API_KEY="sk-xxxxxxxxxxxxxxxxxxxx"
+# ==============================================================================
 
-# Configuration for the LLM that will act as the final aggregator/judge
-AGGREGATOR_LLM_CONFIG = {
-    "provider": "deepseek",
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# --- API Keys ---
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_BASE_URL = "[https://api.deepseek.com/v1](https://api.deepseek.com/v1)"
+
+# --- Model Configurations ---
+
+# 强大的评判者模型配置
+JUDGE_MODEL_CONFIG = {
+    "type": "deepseek",
     "model_name": "deepseek-chat",
-    "temperature": 0.1
+    "temperature": 0.1,
+    "max_tokens": 2048,
 }
 
-# --- Agent Definitions ---
-# Each agent has a name, an LLM configuration, and a system prompt defining its role.
-
-# A standard, helpful agent
-AGENT_1_CONFIG = {
-    "name": "Helpful_Agent_1",
-    "llm_config": {
-        "provider": "deepseek",
-        "model_name": "deepseek-chat",
-        "temperature": 0.7
-    },
-    "system_prompt": "You are a helpful assistant. Provide a clear, accurate, and concise answer to the user's query."
+# 智能体团队配置
+# 您可以根据本地Ollama部署的模型进行修改
+AGENT_TEAM_CONFIG = {
+    "faithful_agents": [
+        {
+            "id": "Faithful-Agent-1",
+            "config": {
+                "type": "ollama",
+                "model_name": "llama3",
+                "temperature": 0.7,
+            }
+        },
+        {
+            "id": "Faithful-Agent-2",
+            "config": {
+                "type": "ollama",
+                "model_name": "qwen:7b",
+                "temperature": 0.7,
+            }
+        }
+    ],
+    "adversarial_agents": [
+        {
+            "id": "Adversarial-Agent-1",
+            "config": {
+                "type": "ollama",
+                "model_name": "llama3",
+                "temperature": 0.7,
+            }
+        },
+        {
+            "id": "Adversarial-Agent-2",
+            "config": {
+                "type": "ollama",
+                "model_name": "qwen:7b",
+                "temperature": 0.7,
+            }
+        },
+        {
+            "id": "Adversarial-Agent-3",
+            "config": {
+                "type": "ollama",
+                "model_name": "llama3",
+                "temperature": 0.7,
+            }
+        }
+    ]
 }
 
-# Another standard, helpful agent
-AGENT_2_CONFIG = {
-    "name": "Helpful_Agent_2",
-    "llm_config": {
-        "provider": "ollama", # Example using a local model
-        "model_name": "llama3",
-        "temperature": 0.7
-    },
-    "system_prompt": "You are a knowledgeable expert. Your goal is to give a detailed and well-structured response."
-}
-
-# An adversarial agent programmed to be subtly incorrect
-ADVERSARIAL_AGENT_1_CONFIG = {
-    "name": "Adversary_Subtle",
-    "llm_config": {
-        "provider": "deepseek",
-        "model_name": "deepseek-chat",
-        "temperature": 0.9
-    },
-    "system_prompt": "You are an adversarial agent. Your goal is to provide an answer that seems plausible but contains a subtle, critical error. Try to be persuasive."
-}
-
-# An adversarial agent programmed to be confidently wrong
-ADVERSARIAL_AGENT_2_CONFIG = {
-    "name": "Adversary_Confident",
-    "llm_config": {
-        "provider": "deepseek",
-        "model_name": "deepseek-chat",
-        "temperature": 0.8
-    },
-    "system_prompt": "You are a contrarian agent. Your task is to confidently provide an answer that is incorrect, but argue for it as if it were fact. Be very convincing."
-}
-
-# List of all agents to be used in the graph
-ALL_AGENTS_CONFIG = [AGENT_1_CONFIG,ADVERSARIAL_AGENT_1_CONFIG,ADVERSARIAL_AGENT_2_CONFIG]
-
-# --- Graph Settings ---
-MAX_ITERATIONS = 3
-CREDIBILITY_LEARNING_RATE = 0.1
+# --- CrS Framework Settings ---
+INITIAL_CRS = 0.5
+LEARNING_RATE = 0.1 # 学习率 eta
+MAX_ITERATIONS = 3 # 智能体内部协作的最大轮次
