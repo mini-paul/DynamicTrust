@@ -17,16 +17,17 @@ load_dotenv()
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
 
+
 # OLLAMA_BASE_URL = "http://10.10.206.138:11434"
 OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 # --- Model Configurations ---
 
 # 强大的评判者模型配置
-# JUDGE_MODEL_CONFIG = {
-#     "type": "deepseek",
-#     "model_name": "deepseek-chat",
-#     "temperature": 0.7,
-# }
+JUDGE_MODEL_CONFIG = {
+    "type": "deepseek",
+    "model_name": "deepseek-chat",
+    "temperature": 0.7,
+}
 
 # 智能体团队配置
 # 您可以根据本地Ollama部署的模型进行修改
@@ -77,11 +78,11 @@ OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 #     ]
 # }
 
-JUDGE_MODEL_CONFIG = {
-    "type": "ollama",
-    "model_name": "qwen3:4b",
-    "temperature": 0.7,
-}
+# JUDGE_MODEL_CONFIG = {
+#     "type": "ollama",
+#     "model_name": "qwen3:4b",
+#     "temperature": 0.7,
+# }
 
 AGENT_TEAM_CONFIG = {
     "faithful_agents": [
