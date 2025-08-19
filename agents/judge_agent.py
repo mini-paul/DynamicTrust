@@ -20,6 +20,7 @@ class JudgeAgent(BaseAgent):
             "final_answer": final_answer,
             "ground_truth": ground_truth
         })
+        print("get_reward_score 8888888888888 -- ",response)
         try:
             return float(response.content.strip())
         except ValueError:
@@ -33,6 +34,8 @@ class JudgeAgent(BaseAgent):
             "final_answer": final_answer,
             "agent_outputs_and_history": agent_outputs_and_history
         })
+
+        print("get_contribution_scores 99999999999999999999 -- ", response)
         try:
             # Clean the response content to ensure it's a valid JSON string
             content = response.content.strip()
