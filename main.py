@@ -10,7 +10,6 @@ from agents.adversarial_agent import AdversarialAgent
 from agents.judge_agent import JudgeAgent
 from graphs.crs_graph import (
     CrsGraphState,
-    initialize_crs,
     agent_collaboration_step,
     crs_aware_aggregation,
     evaluate_and_reward,
@@ -44,7 +43,7 @@ def build_agent_team():
 def define_workflow():
     """Defines and compiles the LangGraph workflow."""
     workflow = StateGraph(CrsGraphState)
-    workflow.add_node("initialize", initialize_crs)
+
     # Add nodes
     workflow.add_node("collaborate", agent_collaboration_step)
     workflow.add_node("aggregate", crs_aware_aggregation)
@@ -82,15 +81,12 @@ def run_experiment():
     print(">>> Loading Dataset...")
     dataset = load_dataset()
 
-    # Initialize the state for the first run
-    # The credibility scores will be carried over between queries
+    # Initialize the state that will be carried over between runs
     persistent_state = {
         "agent_team": agent_team,
         "judge_agent": judge_agent,
         "credibility_scores": {agent_id: INITIAL_CRS for agent_id in agent_team.keys()}
     }
-
-    print(persistent_state)
 
     print("\n" + "=" * 50)
     print(">>> STARTING EXPERIMENT RUN")
@@ -108,22 +104,27 @@ def run_experiment():
             **persistent_state
         }
 
-        # Invoke the graph
+        # Invoke the graph and capture the final state
         final_run_state = None
         for s in app.stream(run_input):
-            # The final state is the one just before the END node
-            if END in s:
-                final_run_state = s[END]
+            # The stream yields a dictionary for each step. The last one contains the final state.
+            # The key will be the name of the last node that ran before the graph finished.
+            last_node = list(s.keys())[0]
+            final_run_state = s[last_node]
 
         # Update the persistent state for the next run
         if final_run_state:
-            updated_scores = final_run_state["credibility_scores"]
-            persistent_state["credibility_scores"] = updated_scores
-            print("\n--- End of Query Round ---")
-            print(f"Final Answer Given: {final_run_state['final_answer']}")
-            print(f"Ground Truth: {item['answer']}")
-            print(f"Reward: {final_run_state['reward']}")
-            print(f"Updated CrS for next round: { {k: round(v, 3) for k, v in updated_scores.items()} }")
+            updated_scores = final_run_state.get("credibility_scores")
+            if updated_scores:
+                persistent_state["credibility_scores"] = updated_scores
+                print("\n--- End of Query Round ---")
+                print(f"Final Answer Given: {final_run_state.get('final_answer')}")
+                print(f"Ground Truth: {item['answer']}")
+                print(f"Reward: {final_run_state.get('reward')}")
+                print(f"Updated CrS for next round: { {k: round(v, 3) for k, v in updated_scores.items()} }")
+            else:
+                print("Error: 'credibility_scores' not found in final state.")
+                break
         else:
             print("Error: Graph did not complete successfully.")
             break
@@ -134,9 +135,7 @@ def run_experiment():
 if __name__ == "__main__":
     run_experiment()
 
-
     """
-    
     ### 如何运行这个项目
 
     1.  **环境设置**:

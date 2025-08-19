@@ -16,7 +16,7 @@ class CrsGraphState(TypedDict):
     query: str
     ground_truth: str
     agent_team: Dict  # Holds agent instances
-    judge_agent: Dict
+    judge_agent: object
     credibility_scores: Dict[str, float]
 
     # Intermediate states for the graph flow
@@ -58,39 +58,74 @@ def initialize_crs(state: CrsGraphState) -> CrsGraphState:
     print("initialize_crs 0000000000000000000000000 --- ", state)
     return state
 
+# --- Graph Node Functions ---
 
 def agent_collaboration_step(state: CrsGraphState) -> CrsGraphState:
     """
     Node for a single round of agent collaboration. Each agent gives an answer.
+    Resets conversation history and iteration count for the new query.
     """
     query = state["query"]
     agent_team = state["agent_team"]
 
-    # Format conversation history for the prompt
-    history_str = "\n".join([f"{msg.name}: {msg.content}" for msg in state.get("conversation_history",[])])
+    # Reset per-query state for the new run
+    state["conversation_history"] = []
+    state["iteration"] = 0
+
+    # Format conversation history for the prompt (will be empty on first pass)
+    history_str = "\n".join([f"{msg.name}: {msg.content}" for msg in state["conversation_history"]])
 
     current_outputs = {}
     new_history_messages = []
 
-    print(f"\n--- COLLABORATION ITERATION {state.get("iteration",0) + 1} ---")
+    print(f"\n--- COLLABORATION ITERATION {state['iteration'] + 1} ---")
 
+    # Iterate only over collaborating agents
     for agent_id, agent in agent_team.items():
-        print(f"{agent_id}: {agent}")
         response = agent.invoke(query, history_str)
-        only_response = extract_final_answer(response)
-
-        current_outputs[agent_id] = only_response
-        new_history_messages.append(HumanMessage(content=only_response, name=agent_id))
+        only_text = extract_final_answer(response)
+        current_outputs[agent_id] = only_text
+        new_history_messages.append(HumanMessage(content=only_text, name=agent_id))
         print(f"  - {agent_id} answered.")
-        print(current_outputs)
-        print(history_str)
-        print("*********************************************")
+
     state["agent_outputs"] = current_outputs
-    state["conversation_history"] = state.get("conversation_history",[]).extend(new_history_messages)
-    state["iteration"] = state.get("iteration",0) + 1
-    print("agent_collaboration_step 55555555555555555555555555555 --- ", state)
+    state["conversation_history"].extend(new_history_messages)
+    state["iteration"] += 1
 
     return state
+
+# def agent_collaboration_step(state: CrsGraphState) -> CrsGraphState:
+#     """
+#     Node for a single round of agent collaboration. Each agent gives an answer.
+#     """
+#     query = state["query"]
+#     agent_team = state["agent_team"]
+#
+#     # Format conversation history for the prompt
+#     history_str = "\n".join([f"{msg.name}: {msg.content}" for msg in state.get("conversation_history",[])])
+#
+#     current_outputs = {}
+#     new_history_messages = []
+#
+#     print(f"\n--- COLLABORATION ITERATION {state.get("iteration",0) + 1} ---")
+#
+#     for agent_id, agent in agent_team.items():
+#         print(f"{agent_id}: {agent}")
+#         response = agent.invoke(query, history_str)
+#         only_response = extract_final_answer(response)
+#
+#         current_outputs[agent_id] = only_response
+#         new_history_messages.append(HumanMessage(content=only_response, name=agent_id))
+#         print(f"  - {agent_id} answered.")
+#         print(current_outputs)
+#         print(history_str)
+#         print("*********************************************")
+#     state["agent_outputs"] = current_outputs
+#     state["conversation_history"] = state.get("conversation_history",[]).extend(new_history_messages)
+#     state["iteration"] = state.get("iteration",0) + 1
+#     print("agent_collaboration_step 55555555555555555555555555555 --- ", state)
+#
+#     return state
 
 
 def crs_aware_aggregation(state: CrsGraphState) -> CrsGraphState:
@@ -125,7 +160,7 @@ def crs_aware_aggregation(state: CrsGraphState) -> CrsGraphState:
     print(f"Chosen Agent: {chosen_agent}")
     print(f"Final Answer: {final_answer}")
 
-    print("crs_aware_aggregation 111111111111111 --- ",state)
+    # print("crs_aware_aggregation 111111111111111 --- ",state)
 
     return state
 
@@ -135,7 +170,7 @@ def evaluate_and_reward(state: CrsGraphState) -> CrsGraphState:
     Node where the Judge Agent evaluates the final answer and assigns rewards.
     """
 
-    print("evaluate_and_reward 2222222222222222222222 --- ", state)
+    # print("evaluate_and_reward 2222222222222222222222 --- ", state)
     # judge = state["agent_team"]["judge"]  # Assuming judge is passed in the team
     judge = state["judge_agent"]
 
@@ -198,6 +233,8 @@ def update_crs(state: CrsGraphState) -> CrsGraphState:
             print(f"  - {agent_id}: {round(old_crs, 3)} -> {round(new_crs, 3)}")
 
     state["credibility_scores"] = current_crs
+
+    print("update_crs 3333333333333333333333333222222 --- ", state)
     return state
 
 
