@@ -10,9 +10,5 @@
     {
         "question": "Betty is saving money for a new wallet which costs $100. Betty has only half of the money she needs. Her parents decided to give her $15 for that purpose, and her grandparents twice as much as her parents. How much more money does Betty need to buy the wallet?",
         "answer": "Betty has 100/2 = $50. Her parents gave her $15. Her grandparents gave her 15 * 2 = $30. In total, she has 50 + 15 + 30 = $95. She needs 100 - 95 = $5 more."
-    },
-    {
-        "question": "A deep-sea monster rises from the waters once every hundred years to feast on a ship and swim back down. The last time he rose was 30 years ago. He has a son who rises every 25 years. The son last rose 10 years ago. In how many years will they rise together?",
-        "answer": "The monster rises in 100 - 30 = 70 years. The son rises in 25 - 10 = 15 years. The monster's rising years are 70, 170, 270... The son's rising years are 15, 40, 65, 90, 115, 140, 165, 190... The monster rises in 70 years. The son will rise in 15, 40, 65, 90 years. They will not rise together in the near future based on this cycle."
     }
 ]
